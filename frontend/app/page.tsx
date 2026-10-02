@@ -1,24 +1,11 @@
 "use client"
 
-declare global {
-    interface Window {
-        ethereum?: any;
-    }
-}
-
 import { useEffect, useState } from "react"
 import { BrowserProvider, Contract, formatEther, parseEther } from "ethers"
 import abi from "@/app/abi/Crowdfund.json"
-
-const contract_address: string = "0x5FbDB2315678afecb367f032d93F642f64180aa3"
-
-interface Campaign {
-    creator: string,
-    goal: bigint,
-    deadline: bigint,
-    totalFunded: bigint,
-    claimed: boolean,
-}
+import { Campaign } from "./types";
+import { CONTRACT_ADDRESS } from "@/app/constants"
+import Link from "next/link";
 
 export default function Page() {
     const [error, setError] = useState<string | null>(null)
@@ -41,7 +28,7 @@ export default function Page() {
                 setError("Wrong network change to 31337")
                 return
             }
-            const contract = new Contract(contract_address, abi.abi, provider)
+            const contract = new Contract(CONTRACT_ADDRESS, abi.abi, provider)
             const camps: Campaign[] = await contract.getCampaigns()
             setCampaigns(camps)
         } catch(err) {
@@ -57,8 +44,11 @@ export default function Page() {
         <div style={{padding: "2rem"}}>
             <ul>
                 {campaigns.map((camp, ind) => 
-                <li key={ind}>address: {camp.creator.slice(0, 5) + "..." + camp.creator.slice(-5)} must
-                 achieve this goal: {formatEther(camp.goal)}ETH in {new Date(Number(camp.deadline) * 1000).toLocaleString()} actual funds: {formatEther(camp.totalFunded)}ETH</li>
+                <li key={ind}>
+                    <Link href={`/campaign/${ind + 1}`} style={{display: "block"}}>
+                        address: {camp.creator.slice(0, 5) + "..." + camp.creator.slice(-5)}
+                    </Link>
+                </li>
                 )}
             </ul>
             <form onSubmit={async (e) => {
@@ -77,8 +67,8 @@ export default function Page() {
                     }
                     await provider.send("eth_requestAccounts", [])
                     const signer = await provider.getSigner()
-                    const contract = new Contract(contract_address, abi.abi, signer)
-                    const tx = await contract.createCampaign(parseEther(form.goal.toString()), form.duration * 24 * 60 * 60)
+                    const contract = new Contract(CONTRACT_ADDRESS, abi.abi, signer)
+                    const tx = await contract.createCampaign(parseEther(form.goal.toString()), Math.floor(form.duration * 24 * 60 * 60))
                     await tx.wait()
                     const Camps: Campaign[] = await contract.getCampaigns()
                     setCampaigns(Camps)
@@ -87,12 +77,14 @@ export default function Page() {
                     setError("Error in creating Campaign: " + (err as Error).message)
                 }
             }}>
-                <input 
+                <input
+                    type="number"
                     placeholder="Goal"
                     value={form.goal}
                     onChange={(e) => setForm({...form, goal: Number(e.target.value)})}>
                 </input><br />
                 <input 
+                    type="number"
                     placeholder="Duration"
                     value={form.duration}
                     onChange={(e) => setForm({...form, duration: Number(e.target.value)})}>

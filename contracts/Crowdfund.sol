@@ -32,6 +32,11 @@ contract Crowdfund {
         return Camps;
     }
 
+    function getCampaign(uint id) external view returns (Campaign memory) {
+        require(id > 0 && id <= campaignCount, "Campaign doesn't exist");
+        return campaigns[id];
+    }
+
     function contribute(uint campaignId) external payable {
         require(campaignId > 0 && campaignId <= campaignCount, "Campaign doesn't exist");
         require(msg.value > 0, "Money must be > 0");
@@ -61,6 +66,7 @@ contract Crowdfund {
         require(contributions[campaignId][msg.sender] > 0, "You didn't put any funds to refund!!");
         uint amount = contributions[campaignId][msg.sender];
         contributions[campaignId][msg.sender] = 0;
+        campaign.totalFunded -= amount;
         (bool sent, ) = payable(msg.sender).call{value: amount}("");
         require(sent, "The transfer failed everything is reverted");
     }
